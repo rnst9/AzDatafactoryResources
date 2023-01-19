@@ -1,0 +1,336 @@
+{
+    "name": "Notification_Actitivity_Error",
+    "properties": {
+        "activities": [
+            {
+                "name": "Set JSON schema",
+                "type": "SetVariable",
+                "dependsOn": [
+                    {
+                        "activity": "status",
+                        "dependencyConditions": [
+                            "Succeeded"
+                        ]
+                    },
+                    {
+                        "activity": "runId",
+                        "dependencyConditions": [
+                            "Succeeded"
+                        ]
+                    },
+                    {
+                        "activity": "pipelineName",
+                        "dependencyConditions": [
+                            "Succeeded"
+                        ]
+                    },
+                    {
+                        "activity": "Message",
+                        "dependencyConditions": [
+                            "Succeeded"
+                        ]
+                    },
+                    {
+                        "activity": "activityStartTime",
+                        "dependencyConditions": [
+                            "Succeeded"
+                        ]
+                    },
+                    {
+                        "activity": "executionEndTime",
+                        "dependencyConditions": [
+                            "Succeeded"
+                        ]
+                    },
+                    {
+                        "activity": "duration",
+                        "dependencyConditions": [
+                            "Succeeded"
+                        ]
+                    },
+                    {
+                        "activity": "triggerTime",
+                        "dependencyConditions": [
+                            "Succeeded"
+                        ]
+                    },
+                    {
+                        "activity": "activityName",
+                        "dependencyConditions": [
+                            "Succeeded"
+                        ]
+                    },
+                    {
+                        "activity": "If runError",
+                        "dependencyConditions": [
+                            "Succeeded"
+                        ]
+                    }
+                ],
+                "userProperties": [],
+                "typeProperties": {
+                    "variableName": "messageCard",
+                    "value": {
+                        "value": "{\n    '@type': 'MessageCard',\n    '@context': 'http://schema.org/extensions',\n    'themeColor': '0076D7',\n    'summary': 'Pipeline status alert message',\n    'sections': [\n        {\n            'activityTitle': 'Pipeline Execution Alert',\n            'facts': [\n                {\n                    'name': 'Data Factory Name:',\n                    'value': '@{pipeline().DataFactory}'\n                },\n                {\n                    'name': 'Pipeline Name:',\n                    'value': '@{variables('pipelineName')}'\n                },\n                {\n                    'name': 'Pipeline Status:',\n                    'value': '@{variables('status')}'\n                },\n                {\n                    'name': 'Activity:',\n                    'value': '@{variables('activityName')}'\n                },\n                {\n                    'name': 'Activity Error Message:',\n                    'value': '@{variables('activityError')}'\n                },\n                {\n                    'name': 'Pipeline Error Message:',\n                    'value': '@{variables('message')}'\n                },\n                {\n                    'name': 'Activity Duration:',\n                    'value': '@{variables('durationActivity')}'\n                },\n                {\n                    'name': 'Pipeline Trigger Time (UTC):',\n                    'value': '@{variables('TriggerTime')}'\n                },\n                {\n                    'name': 'Activity Start Time (UTC):',\n                    'value': '@{variables('activityStartTime')}'\n                },\n                {\n                    'name': 'Activity End Time (UTC):',\n                    'value': '@{variables('executionEndTime')}'\n                },\n                {\n                    'name': 'Notification Time (UTC):',\n                    'value': '@{utcnow()}'\n                }\n\n            ],\n            'markdown': true\n        }\n    ],\n    'potentialAction': [\n        {\n            '@type': 'OpenUri',\n            'name': 'View pipeline run',\n            'targets': [\n                {\n                    'os': 'default',\n                    'uri': '@{concat('https://adf.azure.com/monitoring/pipelineruns/',variables('runId'),'?factory=/subscriptions/',variables('subscription'),'/resourceGroups/', variables('resourceGroup'), '/providers/Microsoft.DataFactory/factories/',pipeline().DataFactory)}'\n                }\n            ]\n        }\n    ]\n}",
+                        "type": "Expression"
+                    }
+                }
+            },
+            {
+                "name": "Invoke Teams Webhook Url",
+                "type": "WebActivity",
+                "dependsOn": [
+                    {
+                        "activity": "Set JSON schema",
+                        "dependencyConditions": [
+                            "Succeeded"
+                        ]
+                    }
+                ],
+                "policy": {
+                    "timeout": "0.12:00:00",
+                    "retry": 0,
+                    "retryIntervalInSeconds": 30,
+                    "secureOutput": false,
+                    "secureInput": false
+                },
+                "userProperties": [],
+                "typeProperties": {
+                    "url": {
+                        "value": "@variables('teamWebhookUrl')",
+                        "type": "Expression"
+                    },
+                    "connectVia": {
+                        "referenceName": "AutoResolveIntegrationRuntime",
+                        "type": "IntegrationRuntimeReference"
+                    },
+                    "method": "POST",
+                    "body": {
+                        "value": "@json(variables('messageCard'))",
+                        "type": "Expression"
+                    }
+                }
+            },
+            {
+                "name": "status",
+                "type": "SetVariable",
+                "dependsOn": [],
+                "userProperties": [],
+                "typeProperties": {
+                    "variableName": "status",
+                    "value": {
+                        "value": "@json(pipeline().parameters.activityObject).Status",
+                        "type": "Expression"
+                    }
+                }
+            },
+            {
+                "name": "runId",
+                "type": "SetVariable",
+                "dependsOn": [],
+                "userProperties": [],
+                "typeProperties": {
+                    "variableName": "runId",
+                    "value": {
+                        "value": "@json(pipeline().parameters.pipelineObject).RunId",
+                        "type": "Expression"
+                    }
+                }
+            },
+            {
+                "name": "pipelineName",
+                "type": "SetVariable",
+                "dependsOn": [],
+                "userProperties": [],
+                "typeProperties": {
+                    "variableName": "pipelineName",
+                    "value": {
+                        "value": "@json(pipeline().parameters.pipelineObject).Pipeline",
+                        "type": "Expression"
+                    }
+                }
+            },
+            {
+                "name": "Message",
+                "type": "SetVariable",
+                "dependsOn": [],
+                "userProperties": [],
+                "typeProperties": {
+                    "variableName": "message",
+                    "value": {
+                        "value": "@replace(json(pipeline().parameters.activityObject).Error['message'], '''', '')",
+                        "type": "Expression"
+                    }
+                }
+            },
+            {
+                "name": "activityStartTime",
+                "type": "SetVariable",
+                "dependsOn": [],
+                "userProperties": [],
+                "typeProperties": {
+                    "variableName": "activityStartTime",
+                    "value": {
+                        "value": "@json(pipeline().parameters.activityObject).ExecutionStartTime",
+                        "type": "Expression"
+                    }
+                }
+            },
+            {
+                "name": "executionEndTime",
+                "type": "SetVariable",
+                "dependsOn": [],
+                "userProperties": [],
+                "typeProperties": {
+                    "variableName": "executionEndTime",
+                    "value": {
+                        "value": "@json(pipeline().parameters.activityObject).executionEndTime",
+                        "type": "Expression"
+                    }
+                }
+            },
+            {
+                "name": "duration",
+                "type": "SetVariable",
+                "dependsOn": [],
+                "userProperties": [],
+                "typeProperties": {
+                    "variableName": "durationActivity",
+                    "value": {
+                        "value": "@split(json(pipeline().parameters.activityObject).Duration, '.')[0]",
+                        "type": "Expression"
+                    }
+                }
+            },
+            {
+                "name": "triggerTime",
+                "type": "SetVariable",
+                "dependsOn": [],
+                "userProperties": [],
+                "typeProperties": {
+                    "variableName": "TriggerTime",
+                    "value": {
+                        "value": "@json(pipeline().parameters.pipelineObject).TriggerTime",
+                        "type": "Expression"
+                    }
+                }
+            },
+            {
+                "name": "activityName",
+                "type": "SetVariable",
+                "dependsOn": [],
+                "userProperties": [],
+                "typeProperties": {
+                    "variableName": "activityName",
+                    "value": {
+                        "value": "@json(pipeline().parameters.activityObject).Error['target']",
+                        "type": "Expression"
+                    }
+                }
+            },
+            {
+                "name": "If runError",
+                "type": "IfCondition",
+                "dependsOn": [],
+                "userProperties": [],
+                "typeProperties": {
+                    "expression": {
+                        "value": "@contains(json(pipeline().parameters.activityObject).output, 'runError')",
+                        "type": "Expression"
+                    },
+                    "ifFalseActivities": [
+                        {
+                            "name": "activityError_copy2",
+                            "type": "SetVariable",
+                            "dependsOn": [],
+                            "userProperties": [],
+                            "typeProperties": {
+                                "variableName": "activityError",
+                                "value": {
+                                    "value": "@string(' ')",
+                                    "type": "Expression"
+                                }
+                            }
+                        }
+                    ],
+                    "ifTrueActivities": [
+                        {
+                            "name": "activityError_copy1",
+                            "type": "SetVariable",
+                            "dependsOn": [],
+                            "userProperties": [],
+                            "typeProperties": {
+                                "variableName": "activityError",
+                                "value": {
+                                    "value": "@replace(json(pipeline().parameters.activityObject).output.runError, '''', '')",
+                                    "type": "Expression"
+                                }
+                            }
+                        }
+                    ]
+                }
+            }
+        ],
+        "parameters": {
+            "activityObject": {
+                "type": "string"
+            },
+            "pipelineObject": {
+                "type": "string"
+            }
+        },
+        "variables": {
+            "messageCard": {
+                "type": "String"
+            },
+            "status": {
+                "type": "String"
+            },
+            "activityError": {
+                "type": "String"
+            },
+            "message": {
+                "type": "String"
+            },
+            "activityStartTime": {
+                "type": "String"
+            },
+            "runId": {
+                "type": "String"
+            },
+            "pipelineName": {
+                "type": "String"
+            },
+            "executionEndTime": {
+                "type": "String"
+            },
+            "durationActivity": {
+                "type": "String"
+            },
+            "TriggerTime": {
+                "type": "String"
+            },
+            "subscription": {
+                "type": "String",
+                "defaultValue": "bcfad370-b428-41b6-81cd-0bf8508a4d56"
+            },
+            "resourceGroup": {
+                "type": "String",
+                "defaultValue": "Datafactory-Pipelines"
+            },
+            "teamWebhookUrl": {
+                "type": "String",
+                "defaultValue": "https://XXXXX.webhook.office.com/webhook/XXXXXX/IncomingWebhook/XXXXXX/XXXXXXXXX"
+            },
+            "activityName": {
+                "type": "String"
+            }
+        },
+        "folder": {
+            "name": "4. Utils"
+        },
+        "annotations": [],
+        "lastPublishTime": "2023-01-18T16:01:54Z"
+    },
+    "type": "Microsoft.DataFactory/factories/pipelines"
+}
